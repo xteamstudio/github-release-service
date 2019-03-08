@@ -1,0 +1,8 @@
+version: '3'
+services:
+  githubrelease:
+    image: echoulen/github-release-service:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - GITHUB_TOKEN=123
