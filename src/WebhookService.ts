@@ -2,6 +2,7 @@ const Octokit = require("@octokit/rest");
 import {ReposCompareCommitsResponse, ReposListReleasesResponseItem} from "@octokit/rest";
 import {Release} from "github-webhook-event-types";
 import {List} from "immutable";
+import issueRegex from "issue-regex";
 
 export class WebhookService {
   private github;
@@ -26,10 +27,11 @@ export class WebhookService {
     const repo = hook.repository.name;
     const res = await this.github.repos.listReleases({owner, repo});
     const releases = List<ReposListReleasesResponseItem>(res.data);
-    const head = releases.get(0).tag_name;
-    const base = releases.get(1).tag_name;
-    const compareCommitResponse: ReposCompareCommitsResponse = await this.github.repos.compareCommits({owner, repo, base, head});
-    return List(compareCommitResponse.data.commits)
+
+    const commits = releases.size < 2 ?
+      await this.getFirstReleaseCommits(hook) :
+      await this.getDiffCommits(hook, releases);
+    return commits
       .map((commit: any) => {
         let message = commit.commit.message;
         // process commit message of squash merge
@@ -38,6 +40,25 @@ export class WebhookService {
         }
         return `- ${message}`
       })
+      .filter((message) => {
+        return message.indexOf("Merge pull request")  === -1 && List(message.match(issueRegex())).size > 0;
+      })
       .join("\n");
+  }
+
+  private async getFirstReleaseCommits(hook: Release) {
+    const owner = hook.repository.owner.login;
+    const repo = hook.repository.name;
+    const res = await this.github.repos.listCommits({owner, repo});
+    return List(res.data);
+  }
+
+  private async getDiffCommits(hook: Release, releases: List<ReposListReleasesResponseItem>) {
+    const owner = hook.repository.owner.login;
+    const repo = hook.repository.name;
+    const head = releases.get(0).tag_name;
+    const base = releases.get(1).tag_name;
+    const compareCommitResponse: ReposCompareCommitsResponse = await this.github.repos.compareCommits({owner, repo, base, head});
+    return List(compareCommitResponse.data.commits);
   }
 }
