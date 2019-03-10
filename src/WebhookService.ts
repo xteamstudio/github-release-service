@@ -1,7 +1,7 @@
 const Octokit = require("@octokit/rest");
-import {ReposCompareCommitsResponse, ReposListReleasesResponseItem} from "@octokit/rest";
+import {IssuesGetResponse, ReposCompareCommitsResponse, ReposListReleasesResponseItem} from "@octokit/rest";
 import {Release} from "github-webhook-event-types";
-import {List} from "immutable";
+import {List, Set} from "immutable";
 import issueRegex from "issue-regex";
 
 export class WebhookService {
@@ -31,19 +31,26 @@ export class WebhookService {
     const commits = releases.size < 2 ?
       await this.getFirstReleaseCommits(hook) :
       await this.getDiffCommits(hook, releases);
-    return commits
-      .map((commit: any) => {
-        let message = commit.commit.message;
-        // process commit message of squash merge
-        if (message.indexOf('\n') !== -1) {
-          message = message.substr(0, message.indexOf('\n'))
-        }
-        return `- ${message}`
-      })
+
+    const issues = Set(commits
+      .map((commit: any) => commit.commit.message)
       .filter((message) => {
         return message.indexOf("Merge pull request")  === -1 && List(message.match(issueRegex())).size > 0;
       })
-      .join("\n");
+      .map((message) => {
+        const issueNo = List<string>(message.match(issueRegex())).get(0);
+        return issueNo.replace("#", "");
+      })
+      .toArray());
+
+    const issueList = List().asMutable();
+    for (const issueNo of issues.toArray()) {
+      const res = await this.github.issues.get({owner, repo, number: issueNo});
+      const issueItem: IssuesGetResponse = res.data;
+      issueList.push(`- ${issueItem.title}`);
+    }
+
+    return issueList.join("\n");
   }
 
   private async getFirstReleaseCommits(hook: Release) {
