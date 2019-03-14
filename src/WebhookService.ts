@@ -31,7 +31,6 @@ export class WebhookService {
     const commits = releases.size < 2 ?
       await this.getFirstReleaseCommits(hook) :
       await this.getDiffCommits(hook, releases);
-
     const issues = Set(commits
       .map((commit: any) => commit.commit.message)
       .filter((message) => {
@@ -44,12 +43,11 @@ export class WebhookService {
       })
       .flatten()
       .toArray());
-
     const issueList = List().asMutable();
     for (const issueNo of issues.toArray()) {
       const res = await this.github.issues.get({owner, repo, number: issueNo});
       const issueItem: IssuesGetResponse = res.data;
-      issueList.push(`- ${issueItem.title}`);
+      issueList.push(`- ${issueItem.title}(#${issueItem.number})`);
     }
 
     return issueList.join("\n");
