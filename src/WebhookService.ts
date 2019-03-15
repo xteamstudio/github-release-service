@@ -34,20 +34,19 @@ export class WebhookService {
     const issues = Set(commits
       .map((commit: any) => commit.commit.message)
       .filter((message) => {
-        return message.indexOf("Merge pull request")  === -1 && List(message.match(issueRegex())).size > 1;
+        return message.indexOf("Merge pull request") === -1 && List(message.match(issueRegex())).size > 0;
       })
       .map((message) => {
-        return List<string>(message.match(issueRegex()))
-          .pop()
-          .map((i) => i.replace("#", ""))
+        return List<string>(message.match(issueRegex())).map((i) => i.replace("#", ""))
       })
       .flatten()
       .toArray());
+
     const issueList = List().asMutable();
     for (const issueNo of issues.toArray()) {
       const res = await this.github.issues.get({owner, repo, number: issueNo});
       const issueItem: IssuesGetResponse = res.data;
-      issueList.push(`- ${issueItem.title}(#${issueItem.number})`);
+      !issueItem.pull_request && issueList.push(`- ${issueItem.title}(#${issueItem.number})`);
     }
 
     return issueList.join("\n");
