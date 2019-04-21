@@ -1,6 +1,7 @@
 const Octokit = require("@octokit/rest");
 import {IssuesGetResponse, ReposCompareCommitsResponse, ReposListReleasesResponseItem} from "@octokit/rest";
 import {Release} from "github-webhook-event-types";
+import {IssuesLabel} from "github-webhook-event-types/source/Issues";
 import {List, Set} from "immutable";
 import issueRegex from "issue-regex";
 
@@ -15,6 +16,10 @@ export class WebhookService {
   }
 
   public async process(hook: Release): Promise<void> {
+    if (hook.action !== "published") {
+      return;
+    }
+
     const owner = hook.repository.owner.login;
     const repo = hook.repository.name;
     const releaseNote = await this.genReleaseNote(hook);
@@ -46,10 +51,36 @@ export class WebhookService {
     for (const issueNo of issues.toArray()) {
       const res = await this.github.issues.get({owner, repo, number: issueNo});
       const issueItem: IssuesGetResponse = res.data;
-      !issueItem.pull_request && issueList.push(`- ${issueItem.title}(#${issueItem.number})`);
+      !issueItem.pull_request && issueList.push(issueItem);
     }
 
-    return issueList.join("\n");
+    return WebhookService.groupByIssueLabelType(issueList);
+  }
+
+  private static groupByIssueLabelType(issueList: List<IssuesGetResponse>) {
+    return issueList.groupBy((issue) => WebhookService.getLabelType(issue.labels))
+      .map((issues: List<IssuesGetResponse>, issueLabelType) => {
+        const groupTitle = `### ${issueLabelType}\n`;
+        const rows = issues.map((issue) => `- [#${issue.number}] ${issue.title}`);
+        return groupTitle + rows.join("\n")
+      }).join("\n");
+  }
+
+  private static getLabelType(labels: IssuesLabel[]): "Fixes" | "Features" | "widgets" | "Improvement" | "Development" | "Others" {
+    const labelList = List<IssuesLabel>(labels);
+    if (labelList.find((label) => label.name.toLocaleLowerCase().includes("bug"))) {
+      return "Fixes";
+    } else if (labelList.find((label) => label.name.toLocaleLowerCase().includes("task"))) {
+      return "Features";
+    } else if (labelList.find((label) => label.name.toLocaleLowerCase().includes("widget"))) {
+      return "widgets";
+    } else if (labelList.find((label) => label.name.toLocaleLowerCase().includes("Improvement"))) {
+      return "Improvement";
+    } else if (labelList.find((label) => label.name.toLocaleLowerCase().includes("development"))) {
+      return "Development";
+    } else {
+      return "Others"
+    }
   }
 
   private async getFirstReleaseCommits(hook: Release) {
