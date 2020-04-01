@@ -13,6 +13,8 @@ services:
     environment:
       - GITHUB_TOKEN=123
       - PREFIX=M- /* optional */
+      - URL_PATTERN=https://xxx.xxx.io/issue?id=#{ISSUE_NO}
+      /* URL_PATTERN required if set PREFIX, #{ISSUE_NO} will been replaced by issue number */
 ```
 
 ### Webhook configuration

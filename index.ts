@@ -6,9 +6,10 @@ import {WebhookService} from "./src/WebhookService";
 const port = process.env.PORT || 4000;
 const token = process.env.GITHUB_TOKEN || "";
 const prefix = process.env.PREFIX || "";
+const urlPattern = process.env.URL_PATTERN || "";
 
 function startServer() {
-  const webhookService = new WebhookService(token, prefix);
+  const webhookService = new WebhookService(token, prefix, urlPattern);
 
   const app = express();
   app.use(bodyParser.json());

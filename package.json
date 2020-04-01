@@ -17,6 +17,7 @@
     "@types/axios": "^0.14.0",
     "@types/body-parser": "^1.17.0",
     "@types/express": "^4.16.1",
+    "@types/jest": "^25.1.4",
     "@types/node": "^11.9.5",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
@@ -24,12 +25,11 @@
     "github-webhook-event-types": "^1.2.1",
     "immutable": "^4.0.0-rc.12",
     "issue-regex": "^3.0.0",
+    "jest": "^25.2.4",
+    "ts-jest": "^25.3.0",
     "ts-node": "^8.0.2",
     "typescript": "^3.3.3333"
   },
   "devDependencies": {
-    "@types/jest": "^25.1.4",
-    "jest": "^25.2.4",
-    "ts-jest": "^25.3.0"
   }
 }

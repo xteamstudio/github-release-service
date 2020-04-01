@@ -7,3 +7,4 @@ services:
     environment:
       - GITHUB_TOKEN=123
       - PREFIX=M-
+      - URL_PATTERN=https://xxx.xxx.io/issue?id=#{ISSUE_NO}

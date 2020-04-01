@@ -5,19 +5,22 @@ import {IssuesLabel} from "github-webhook-event-types/source/Issues";
 import {List, Set} from "immutable";
 import issueRegex from "issue-regex";
 
+export const getUrlByPattern = (urlPattern: string, issueNumber: string): string => urlPattern.replace(`#{ISSUE_NO}`, issueNumber);
 export const prefixRegExp = (prefix: string): RegExp => new RegExp(`${prefix}[1-9]\\d*\\b`, "g");
 
 export class WebhookService {
   private github;
   private readonly prefix;
+  private readonly urlPattern;
 
-  constructor(token: string, prefix: string) {
+  constructor(token: string, prefix: string, urlPattern: string) {
     this.github = new Octokit({
       auth: `token ${token}`,
       userAgent: "octokit/rest.js v16.17.0"
     });
 
     this.prefix = prefix;
+    this.urlPattern = urlPattern;
   }
 
   public async process(hook: Release): Promise<void> {
@@ -49,14 +52,14 @@ export class WebhookService {
       })
       .map((message) => {
         return isCustomPrefix ?
-            List<string>(message.match(prefixRegExp(this.prefix))) :
+            List<string>(message.match(prefixRegExp(this.prefix)).map((i) => i.replace(this.prefix, ""))) :
             List<string>(message.match(issueRegex())).map((i) => i.replace("#", ""));
       })
       .flatten()
       .toArray());
 
     if (isCustomPrefix) {
-      return `### Resolves\n${issues.map((issue: string) => `- ${issue}`).join("\n")}`
+      return `### Resolves\n${issues.map((issue: string) => `- [${issue}](${getUrlByPattern(this.urlPattern, issue)})`).join("\n")}`
     } else {
       const issueList = List().asMutable();
       for (const issueNo of issues.toArray()) {
