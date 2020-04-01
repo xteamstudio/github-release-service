@@ -5,14 +5,19 @@ import {IssuesLabel} from "github-webhook-event-types/source/Issues";
 import {List, Set} from "immutable";
 import issueRegex from "issue-regex";
 
+export const prefixRegExp = (prefix: string): RegExp => new RegExp(`${prefix}[1-9]\\d*\\b`, "g");
+
 export class WebhookService {
   private github;
+  private readonly prefix;
 
-  constructor(token: string) {
+  constructor(token: string, prefix: string) {
     this.github = new Octokit({
       auth: `token ${token}`,
       userAgent: "octokit/rest.js v16.17.0"
     });
+
+    this.prefix = prefix;
   }
 
   public async process(hook: Release): Promise<void> {
@@ -28,6 +33,7 @@ export class WebhookService {
   }
 
   private async genReleaseNote(hook: Release): Promise<string> {
+    const isCustomPrefix = this.prefix !== "";
     const owner = hook.repository.owner.login;
     const repo = hook.repository.name;
     const res = await this.github.repos.listReleases({owner, repo});
@@ -42,22 +48,28 @@ export class WebhookService {
         return message.indexOf("Merge pull request") === -1 && List(message.match(issueRegex())).size > 0;
       })
       .map((message) => {
-        return List<string>(message.match(issueRegex())).map((i) => i.replace("#", ""))
+        return isCustomPrefix ?
+            List<string>(message.match(prefixRegExp(this.prefix))) :
+            List<string>(message.match(issueRegex())).map((i) => i.replace("#", ""));
       })
       .flatten()
       .toArray());
 
-    const issueList = List().asMutable();
-    for (const issueNo of issues.toArray()) {
-      const res = await this.github.issues.get({owner, repo, number: issueNo});
-      const issueItem: IssuesGetResponse = res.data;
-      !issueItem.pull_request && issueList.push(issueItem);
-    }
+    if (isCustomPrefix) {
+      return `### Resolves\n${issues.map((issue: string) => `- ${issue}`).join("\n")}`
+    } else {
+      const issueList = List().asMutable();
+      for (const issueNo of issues.toArray()) {
+        const res = await this.github.issues.get({owner, repo, number: issueNo});
+        const issueItem: IssuesGetResponse = res.data;
+        !issueItem.pull_request && issueList.push(issueItem);
+      }
 
-    return WebhookService.groupByIssueLabelType(issueList);
+      return WebhookService.groupByIssueLabelType(issueList);
+    }
   }
 
-  private static groupByIssueLabelType(issueList: List<IssuesGetResponse>) {
+  private static groupByIssueLabelType(issueList: List<IssuesGetResponse>): string {
     return issueList.groupBy((issue) => WebhookService.getLabelType(issue.labels))
       .map((issues: List<IssuesGetResponse>, issueLabelType) => {
         const groupTitle = `### ${issueLabelType}\n`;

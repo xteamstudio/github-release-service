@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`prefixRegExp spec should prefixRegExp proper 1`] = `
+Array [
+  "M-1111",
+  "M-2222",
+  "M-3333",
+]
+`;

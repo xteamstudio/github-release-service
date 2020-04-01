@@ -10,7 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "declaration": false,
     "lib": ["es5", "es6", "scripthost"],
-    "types": ["node"],
+    "types": ["node", "jest"],
     "skipLibCheck": true,
     "pretty": true,
     "baseUrl": "."

@@ -12,6 +12,7 @@ services:
       - "4000:4000"
     environment:
       - GITHUB_TOKEN=123
+      - PREFIX=M- /* optional */
 ```
 
 ### Webhook configuration
