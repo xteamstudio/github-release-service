@@ -52,7 +52,7 @@ export class WebhookService {
       })
       .map((message) => {
         return isCustomPrefix ?
-            List<string>(message.match(prefixRegExp(this.prefix)).map((i) => i.replace(this.prefix, ""))) :
+            List<string>(message.match(prefixRegExp(this.prefix))).map((i) => i.replace(this.prefix, "")) :
             List<string>(message.match(issueRegex())).map((i) => i.replace("#", ""));
       })
       .flatten()
